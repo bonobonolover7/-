@@ -1,29 +1,34 @@
-from storage import export_rules, import_rules
 import streamlit as st
 from pathlib import Path
 
+# ----------------------------------
+# 페이지 설정
+# ----------------------------------
+
 st.set_page_config(
     page_title="파일 자동 분류기",
-    page_icon="📂",
+    page_icon="📁",
     layout="wide"
 )
 
-st.title("📂 파일 자동 분류기")
+st.title("📁 파일 자동 분류기")
 
-st.write(
-    "파일을 업로드하고 원하는 규칙대로 폴더를 만들어 압축파일을 생성합니다."
+st.caption(
+    "업로드한 파일을 규칙에 따라 자동으로 폴더별 분류하여 ZIP으로 만들어 줍니다."
 )
 
-# -------------------------
+# ----------------------------------
 # Session State
-# -------------------------
+# ----------------------------------
 
 if "rules" not in st.session_state:
     st.session_state.rules = []
 
-# -------------------------
+# ----------------------------------
 # 파일 업로드
-# -------------------------
+# ----------------------------------
+
+st.header("📂 파일 업로드")
 
 uploaded_files = st.file_uploader(
     "파일 선택",
@@ -42,65 +47,92 @@ if uploaded_files:
         })
     )
 
-    st.success(f"{len(uploaded_files)}개의 파일이 업로드되었습니다.")
+    total_size = sum(file.size for file in uploaded_files)
 
-    st.subheader("발견된 확장자")
+    st.success(f"{len(uploaded_files)}개의 파일 업로드")
 
-    st.write(extensions)
+    c1, c2 = st.columns(2)
 
-# -------------------------
-# 규칙 추가
-# -------------------------
+    with c1:
 
-if st.button("➕ 새 폴더 추가"):
+        st.metric(
+            "파일 개수",
+            len(uploaded_files)
+        )
 
-    st.session_state.rules.append({
+    with c2:
 
-        "folder": "",
+        st.metric(
+            "총 용량(MB)",
+            round(total_size / 1024 / 1024, 2)
+        )
 
-        "extensions": [],
+    st.write("### 발견된 확장자")
 
-        "keywords": ""
+    st.write(", ".join(extensions))
 
-    })
+else:
+
+    st.info("파일을 업로드하세요.")
 
 st.divider()
 
-st.header("분류 규칙")
+# ----------------------------------
+# 규칙
+# ----------------------------------
 
-delete = None
+st.header("📋 분류 규칙")
+
+col1, col2 = st.columns([1,6])
+
+with col1:
+
+    if st.button("➕ 규칙 추가"):
+
+        st.session_state.rules.append({
+
+            "folder": "",
+
+            "extensions": [],
+
+            "keywords": [],
+
+            "mode":"OR"
+
+        })
+
+        st.rerun()
+
+with col2:
+
+    st.write(f"현재 규칙 : {len(st.session_state.rules)}개")
+
+delete_index = None
+
+move_up = None
+
+move_down = None
+
+copy_index = None
 
 for i, rule in enumerate(st.session_state.rules):
 
-    with st.container(border=True):
+    with st.expander(
+        f"📁 규칙 {i+1}",
+        expanded=True
+    ):
 
-        col1, col2 = st.columns([9,1])
+        rule["folder"] = st.text_input(
 
-        with col1:
+            "폴더 이름",
 
-            folder = st.text_input(
+            value=rule["folder"],
 
-                "폴더 이름",
+            key=f"folder{i}"
 
-                value=rule["folder"],
+        )
 
-                key=f"folder{i}"
-
-            )
-
-            st.session_state.rules[i]["folder"] = folder
-
-        with col2:
-
-            st.write("")
-
-            st.write("")
-
-            if st.button("❌", key=f"delete{i}"):
-
-                delete = i
-
-        ext = st.multiselect(
+        rule["extensions"] = st.multiselect(
 
             "확장자",
 
@@ -112,294 +144,116 @@ for i, rule in enumerate(st.session_state.rules):
 
         )
 
-        st.session_state.rules[i]["extensions"] = ext
-
-        keyword = st.text_area(
+        keyword_text = st.text_area(
 
             "파일명 포함 문자 (한 줄에 하나)",
 
-            value=rule["keywords"],
+            value="\n".join(rule["keywords"]),
 
-            height=120,
+            key=f"key{i}",
 
-            key=f"keyword{i}"
+            height=120
 
         )
-match_mode = st.radio(
 
-    "분류 방식",
+        rule["keywords"] = [
 
-    ["OR", "AND"],
+            x.strip()
 
-    horizontal=True,
+            for x in keyword_text.splitlines()
 
-    key=f"mode{i}"
+            if x.strip()
 
-)
+        ]
 
-st.session_state.rules[i]["mode"] = match_mode
+        rule["mode"] = st.radio(
 
-        st.session_state.rules[i]["keywords"] = keyword
+            "분류 방식",
 
-        if len(ext) == 0 and keyword.strip() == "":
+            ["OR","AND"],
 
-            st.warning("확장자 또는 포함 문자를 하나 이상 입력하세요.")
+            horizontal=True,
 
-if delete is not None:
+            key=f"mode{i}"
 
-    st.session_state.rules.pop(delete)
+        )
+
+        c1,c2,c3,c4 = st.columns(4)
+
+        with c1:
+
+            if st.button("⬆",key=f"up{i}"):
+
+                move_up=i
+
+        with c2:
+
+            if st.button("⬇",key=f"down{i}"):
+
+                move_down=i
+
+        with c3:
+
+            if st.button("📄 복제",key=f"copy{i}"):
+
+                copy_index=i
+
+        with c4:
+
+            if st.button("🗑 삭제",key=f"del{i}"):
+
+                delete_index=i
+
+if delete_index is not None:
+
+    st.session_state.rules.pop(delete_index)
 
     st.rerun()
 
-st.divider()
+if copy_index is not None:
 
-st.subheader("현재 규칙")
+    import copy
 
-st.json(st.session_state.rules)
+    st.session_state.rules.insert(
 
-st.divider()
+        copy_index+1,
 
-st.subheader("📋 규칙 검사")
+        copy.deepcopy(
 
-extension_owner = {}
-keyword_owner = {}
+            st.session_state.rules[copy_index]
 
-rule_error = False
+        )
 
-for idx, rule in enumerate(st.session_state.rules):
+    )
 
-    folder = rule["folder"].strip()
+    st.rerun()
 
-    extensions = rule["extensions"]
+if move_up is not None:
 
-    keywords = [
-        k.strip().lower()
-        for k in rule["keywords"].splitlines()
-        if k.strip()
-    ]
+    if move_up>0:
 
-    # 폴더 이름 검사
-    if folder == "":
-        st.error(f"{idx+1}번째 규칙 : 폴더 이름이 비어 있습니다.")
-        rule_error = True
+        st.session_state.rules[move_up],st.session_state.rules[move_up-1]=(
 
-    # 최소 하나의 조건
-    if len(extensions) == 0 and len(keywords) == 0:
-        st.error(f"{folder or idx+1} : 확장자 또는 키워드를 하나 이상 입력해야 합니다.")
-        rule_error = True
+            st.session_state.rules[move_up-1],
 
-    # 확장자 중복 검사
-    for ext in extensions:
+            st.session_state.rules[move_up]
 
-        if ext in extension_owner:
-
-            st.error(
-                f"확장자 '{ext}'가 "
-                f"'{extension_owner[ext]}' 폴더와 중복됩니다."
-            )
-
-            rule_error = True
-
-        else:
-
-            extension_owner[ext] = folder
-
-    # 키워드 중복 검사
-    for key in keywords:
-
-        if key in keyword_owner:
-
-            st.error(
-                f"키워드 '{key}'가 "
-                f"'{keyword_owner[key]}' 폴더와 중복됩니다."
-            )
-
-            rule_error = True
-
-        else:
-
-            keyword_owner[key] = folder
-
-if not rule_error:
-
-    st.success("✅ 규칙에 문제가 없습니다.")
-
-else:
-
-    st.warning("위 오류를 수정해야 ZIP을 생성할 수 있습니다.")
-
-# =========================================
-
-st.divider()
-
-st.subheader("📂 파일 분류 미리보기")
-
-if uploaded_files:
-
-    preview = {}
-
-    # 규칙별 빈 폴더 생성
-    for rule in st.session_state.rules:
-
-        folder = rule["folder"].strip()
-
-        if folder == "":
-            folder = "이름없는폴더"
-
-        preview[folder] = []
-
-    preview["미분류"] = []
-
-    # 파일 하나씩 검사
-    for file in uploaded_files:
-
-        filename = file.name
-
-        extension = Path(filename).suffix.lower().replace(".", "")
-
-        matched = False
-
-        for rule in st.session_state.rules:
-
-            folder = rule["folder"].strip()
-
-            if folder == "":
-                folder = "이름없는폴더"
-
-            ext_match = False
-            keyword_match = False
-
-            # 확장자 검사
-            if len(rule["extensions"]) > 0:
-
-                ext_match = extension in rule["extensions"]
-
-            # 키워드 검사
-            if rule["keywords"].strip():
-
-                keywords = [
-                    k.strip().lower()
-                    for k in rule["keywords"].splitlines()
-                    if k.strip()
-                ]
-
-                keyword_match = any(
-                    k in filename.lower()
-                    for k in keywords
-                )
-
-            # OR 방식
-            if ext_match or keyword_match:
-
-                preview[folder].append(filename)
-
-                matched = True
-
-                break
-
-        if not matched:
-
-            preview["미분류"].append(filename)
-
-    # 화면 출력
-    for folder, files in preview.items():
-
-        with st.expander(f"📁 {folder} ({len(files)}개)"):
-
-            if len(files) == 0:
-
-                st.caption("파일 없음")
-
-            else:
-
-                for f in files:
-
-                    st.write("📄", f)
-
-else:
-
-    st.info("파일을 업로드하면 분류 결과를 미리 볼 수 있습니다.")
-
-# ==========================================
-
-st.divider()
-
-st.subheader("💾 규칙 저장")
-
-json_data = export_rules(st.session_state.rules)
-
-st.download_button(
-
-    "📥 규칙 저장",
-
-    json_data,
-
-    file_name="rules.json",
-
-    mime="application/json"
-
-)
-
-st.divider()
-
-st.subheader("📂 규칙 불러오기")
-
-rule_file = st.file_uploader(
-
-    "rules.json 선택",
-
-    type=["json"],
-
-    key="rule_loader"
-
-)
-
-if rule_file is not None:
-
-    try:
-
-        st.session_state.rules = import_rules(rule_file)
-
-        st.success("규칙을 불러왔습니다.")
+        )
 
         st.rerun()
 
-    except Exception as e:
+if move_down is not None:
 
-        st.error(e)
-        
-# ==========================================
+    if move_down<len(st.session_state.rules)-1:
 
-st.divider()
+        st.session_state.rules[move_down],st.session_state.rules[move_down+1]=(
 
-st.subheader("⚙ 규칙 관리")
+            st.session_state.rules[move_down+1],
 
-col1, col2 = st.columns(2)
+            st.session_state.rules[move_down]
 
-with col1:
-
-    if st.button("🗑 모든 규칙 삭제"):
-
-        st.session_state.rules = []
+        )
 
         st.rerun()
 
-with col2:
-
-    st.write(f"현재 규칙 : **{len(st.session_state.rules)}개**")
-
 st.divider()
-
-st.subheader("📊 통계")
-
-if uploaded_files:
-
-    st.metric("업로드 파일", len(uploaded_files))
-
-    st.metric("발견된 확장자", len(extensions))
-
-    st.metric("규칙 개수", len(st.session_state.rules))
-
-else:
-
-    st.info("파일을 업로드하면 통계를 표시합니다.")

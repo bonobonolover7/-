@@ -1,196 +1,143 @@
-from pathlib import Path
-
-INVALID_FOLDER_CHARS = set('<>:"/\\|?*')
-
-WINDOWS_RESERVED_NAMES = {
-    "CON", "PRN", "AUX", "NUL",
-    "COM1", "COM2", "COM3", "COM4",
-    "COM5", "COM6", "COM7", "COM8", "COM9",
-    "LPT1", "LPT2", "LPT3", "LPT4",
-    "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
-}
+import json
 
 
-def validate_rules(rules):
+# =====================================================
+# 규칙(JSON) 저장
+# =====================================================
 
-    errors = []
+def export_rules(rules):
 
-    folder_names = set()
+    return json.dumps(
+        rules,
+        indent=4,
+        ensure_ascii=False
+    )
 
-    extension_only = {}
 
-    keyword_only = {}
+# =====================================================
+# 규칙(JSON) 불러오기
+# =====================================================
 
-    combination = {}
+def import_rules(file):
 
-    for index, rule in enumerate(rules):
+    if hasattr(file, "read"):
 
-        folder = rule["folder"].strip()
-
-        extensions = list(
-            dict.fromkeys(
-                [x.lower() for x in rule["extensions"]]
-            )
+        data = json.loads(
+            file.read().decode("utf-8")
         )
 
-        keywords = list(
-            dict.fromkeys(
-                [x.lower().strip() for x in rule["keywords"]]
-            )
-        )
+    else:
 
-        rule["extensions"] = extensions
-        rule["keywords"] = keywords
+        data = json.loads(file)
 
-        # -----------------------------
-        # 폴더 이름
-        # -----------------------------
+    if not isinstance(data, list):
 
-        if folder == "":
+        raise ValueError("올바른 rules.json이 아닙니다.")
 
-            errors.append(
-                f"{index+1}번째 규칙 : 폴더 이름이 비어 있습니다."
-            )
-
-            continue
-
-        if folder.upper() in WINDOWS_RESERVED_NAMES:
-
-            errors.append(
-                f"{folder} : Windows 예약어입니다."
-            )
-
-        for c in folder:
-
-            if c in INVALID_FOLDER_CHARS:
-
-                errors.append(
-                    f"{folder} : 사용할 수 없는 문자가 있습니다."
-                )
-
-                break
-
-        if folder in folder_names:
-
-            errors.append(
-                f"{folder} : 같은 폴더 이름이 존재합니다."
-            )
-
-        folder_names.add(folder)
-
-        # -----------------------------
-        # 조건
-        # -----------------------------
-
-        if len(extensions) == 0 and len(keywords) == 0:
-
-            errors.append(
-                f"{folder} : 조건이 없습니다."
-            )
-
-            continue
-
-        # -----------------------------
-        # 확장자만
-        # -----------------------------
-
-        if extensions and not keywords:
-
-            for ext in extensions:
-
-                if ext in extension_only:
-
-                    errors.append(
-
-                        f"{ext} 확장자는 "
-
-                        f"{extension_only[ext]} 와 중복됩니다."
-
-                    )
-
-                else:
-
-                    extension_only[ext] = folder
-
-        # -----------------------------
-        # 키워드만
-        # -----------------------------
-
-        elif keywords and not extensions:
-
-            for key in keywords:
-
-                if key in keyword_only:
-
-                    errors.append(
-
-                        f"{key} 키워드는 "
-
-                        f"{keyword_only[key]} 와 중복됩니다."
-
-                    )
-
-                else:
-
-                    keyword_only[key] = folder
-
-        # -----------------------------
-        # 둘 다
-        # -----------------------------
-
-        else:
-
-            for ext in extensions:
-
-                for key in keywords:
-
-                    pair = (ext, key)
-
-                    if pair in combination:
-
-                        errors.append(
-
-                            f"{ext} + {key} 조합이 "
-
-                            f"{combination[pair]} 와 중복됩니다."
-
-                        )
-
-                    else:
-
-                        combination[pair] = folder
-
-    return errors
+    return data
 
 
-def validate_filename(filename, rules):
+# =====================================================
+# 프로젝트(.sfs) 저장
+# =====================================================
 
-    ext = Path(filename).suffix.lower().replace(".", "")
+def export_project(
 
-    matched = []
+    rules,
 
-    for rule in rules:
+    zip_name,
 
-        ext_ok = ext in rule["extensions"]
+    include_unmatched,
 
-        key_ok = any(
+    create_empty_folder
 
-            k.lower() in filename.lower()
+):
 
-            for k in rule["keywords"]
+    project = {
+
+        "version": "1.0",
+
+        "rules": rules,
+
+        "settings": {
+
+            "zip_name": zip_name,
+
+            "include_unmatched": include_unmatched,
+
+            "create_empty_folder": create_empty_folder
+
+        }
+
+    }
+
+    return json.dumps(
+
+        project,
+
+        indent=4,
+
+        ensure_ascii=False
+
+    )
+
+
+# =====================================================
+# 프로젝트(.sfs) 불러오기
+# =====================================================
+
+def import_project(file):
+
+    if hasattr(file, "read"):
+
+        project = json.loads(
+
+            file.read().decode("utf-8")
 
         )
 
-        if rule["mode"] == "OR":
+    else:
 
-            ok = ext_ok or key_ok
+        project = json.loads(file)
 
-        else:
+    if not isinstance(project, dict):
 
-            ok = ext_ok and key_ok
+        raise ValueError("프로젝트 파일이 아닙니다.")
 
-        if ok:
+    if "rules" not in project:
 
-            matched.append(rule["folder"])
+        raise ValueError("rules 정보가 없습니다.")
 
-    return matched
+    if "settings" not in project:
+
+        project["settings"] = {}
+
+    return {
+
+        "rules": project["rules"],
+
+        "zip_name": project["settings"].get(
+
+            "zip_name",
+
+            "분류결과"
+
+        ),
+
+        "include_unmatched": project["settings"].get(
+
+            "include_unmatched",
+
+            True
+
+        ),
+
+        "create_empty_folder": project["settings"].get(
+
+            "create_empty_folder",
+
+            True
+
+        )
+
+    }

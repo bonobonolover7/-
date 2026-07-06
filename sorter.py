@@ -75,15 +75,6 @@ if matched:
 
     break
 
-                    zipf.writestr(
-                        f"{folder}/{filename}",
-                        file.getvalue()
-                    )
-
-                    moved = True
-
-                    break
-
             if not moved:
 
                 zipf.writestr(

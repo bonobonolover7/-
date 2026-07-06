@@ -796,3 +796,425 @@ if test_name:
         st.warning("미분류됩니다.")
 
 st.divider()
+
+# ======================================================
+# 통계
+# ======================================================
+
+st.divider()
+
+st.subheader("📊 통계")
+
+if uploaded_files:
+
+    folder_counts = {}
+
+    extension_counts = {}
+
+    unmatched = 0
+
+    for rule in st.session_state.rules:
+        folder_counts[rule["folder"]] = 0
+
+    for file in uploaded_files:
+
+        filename = file.name
+
+        ext = Path(filename).suffix.lower().replace(".", "")
+
+        extension_counts[ext] = extension_counts.get(ext, 0) + 1
+
+        found = False
+
+        for rule in st.session_state.rules:
+
+            ext_ok = ext in rule["extensions"]
+
+            key_ok = any(
+
+                k.lower() in filename.lower()
+
+                for k in rule["keywords"]
+
+            )
+
+            if rule["mode"] == "OR":
+                ok = ext_ok or key_ok
+            else:
+                ok = ext_ok and key_ok
+
+            if ok:
+
+                folder_counts[rule["folder"]] += 1
+
+                found = True
+
+                break
+
+        if not found:
+
+            unmatched += 1
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+
+        st.write("### 📁 폴더별 파일 수")
+
+        for folder, count in folder_counts.items():
+
+            st.write(f"**{folder}** : {count}개")
+
+        st.write(f"**미분류** : {unmatched}개")
+
+    with c2:
+
+        st.write("### 📄 확장자 통계")
+
+        for ext, count in sorted(extension_counts.items()):
+
+            st.write(f".{ext} : {count}개")
+
+st.divider()
+
+# ======================================================
+# 전체 파일 검색
+# ======================================================
+
+st.subheader("🔍 전체 파일 검색")
+
+search = st.text_input(
+    "검색어 입력",
+    key="global_search"
+)
+
+if uploaded_files:
+
+    files = uploaded_files
+
+    if search:
+
+        files = [
+
+            f
+
+            for f in uploaded_files
+
+            if search.lower() in f.name.lower()
+
+        ]
+
+    st.write(f"검색 결과 : {len(files)}개")
+
+    for file in files:
+
+        ext = Path(file.name).suffix.lower().replace(".", "")
+
+        folder = "미분류"
+
+        for rule in st.session_state.rules:
+
+            ext_ok = ext in rule["extensions"]
+
+            key_ok = any(
+
+                k.lower() in file.name.lower()
+
+                for k in rule["keywords"]
+
+            )
+
+            if rule["mode"] == "OR":
+                ok = ext_ok or key_ok
+            else:
+                ok = ext_ok and key_ok
+
+            if ok:
+
+                folder = rule["folder"]
+
+                break
+
+        st.write(f"📄 {file.name} → **{folder}**")
+
+# ======================================================
+# 규칙 꾸미기
+# ======================================================
+
+st.divider()
+
+st.subheader("🎨 규칙 꾸미기")
+
+ICONS = [
+    "📁","🖼️","🎬","🎵","📄",
+    "📦","⭐","🎨","💼","🧩",
+    "📚","📝","🛠️","💻","📷"
+]
+
+COLORS = [
+    "🔴","🟠","🟡","🟢",
+    "🔵","🟣","⚫","⚪","🟤"
+]
+
+if "rule_style" not in st.session_state:
+    st.session_state.rule_style = {}
+
+if st.session_state.rules:
+
+    names = [
+        r["folder"]
+        for r in st.session_state.rules
+    ]
+
+    selected = st.selectbox(
+        "꾸밀 규칙",
+        names
+    )
+
+    idx = names.index(selected)
+
+    style = st.session_state.rule_style.get(
+
+        selected,
+
+        {
+            "icon":"📁",
+            "color":"🔵",
+            "favorite":False
+        }
+
+    )
+
+    c1,c2,c3 = st.columns(3)
+
+    with c1:
+
+        style["icon"] = st.selectbox(
+
+            "아이콘",
+
+            ICONS,
+
+            index=ICONS.index(style["icon"])
+
+        )
+
+    with c2:
+
+        style["color"] = st.selectbox(
+
+            "색상",
+
+            COLORS,
+
+            index=COLORS.index(style["color"])
+
+        )
+
+    with c3:
+
+        style["favorite"] = st.checkbox(
+
+            "즐겨찾기",
+
+            value=style["favorite"]
+
+        )
+
+    st.session_state.rule_style[selected]=style
+
+st.divider()
+
+st.subheader("📋 규칙 목록")
+
+if st.session_state.rules:
+
+    display=[]
+
+    for rule in st.session_state.rules:
+
+        style=st.session_state.rule_style.get(
+
+            rule["folder"],
+
+            {
+
+                "icon":"📁",
+
+                "color":"🔵",
+
+                "favorite":False
+
+            }
+
+        )
+
+        display.append(
+
+            (
+
+                style["favorite"],
+
+                style["icon"],
+
+                style["color"],
+
+                rule
+
+            )
+
+        )
+
+    display.sort(
+
+        key=lambda x:(not x[0],x[3]["folder"])
+
+    )
+
+    for fav,icon,color,rule in display:
+
+        st.info(
+
+            f"{color} {icon} **{rule['folder']}**"
+
+        )
+
+# ======================================================
+# 고급 규칙 설정
+# ======================================================
+
+st.divider()
+
+st.subheader("⚙️ 고급 규칙")
+
+if "exclude_keywords" not in st.session_state:
+    st.session_state.exclude_keywords = {}
+
+if "priority" not in st.session_state:
+    st.session_state.priority = {}
+
+if st.session_state.rules:
+
+    names = [
+        r["folder"]
+        for r in st.session_state.rules
+    ]
+
+    folder = st.selectbox(
+        "규칙 선택",
+        names,
+        key="advanced_rule"
+    )
+
+    rule = next(
+        r
+        for r in st.session_state.rules
+        if r["folder"] == folder
+    )
+
+    st.write("### 🚫 제외 키워드")
+
+    exclude = "\n".join(
+
+        st.session_state.exclude_keywords.get(
+            folder,
+            []
+        )
+
+    )
+
+    exclude = st.text_area(
+
+        "파일명에 포함되면 제외",
+
+        value=exclude,
+
+        key=f"exclude_{folder}"
+
+    )
+
+    st.session_state.exclude_keywords[folder] = [
+
+        x.strip()
+
+        for x in exclude.splitlines()
+
+        if x.strip()
+
+    ]
+
+    st.write("### ⭐ 우선순위")
+
+    st.session_state.priority[folder] = st.slider(
+
+        "숫자가 클수록 먼저 검사",
+
+        1,
+
+        100,
+
+        value=st.session_state.priority.get(
+            folder,
+            50
+        ),
+
+        key=f"priority_{folder}"
+
+    )
+
+st.divider()
+
+# ======================================================
+# 규칙 충돌 검사
+# ======================================================
+
+st.subheader("🚨 충돌 검사")
+
+conflicts = []
+
+for i in range(len(st.session_state.rules)):
+
+    r1 = st.session_state.rules[i]
+
+    for j in range(i+1, len(st.session_state.rules)):
+
+        r2 = st.session_state.rules[j]
+
+        ext_overlap = set(r1["extensions"]) & set(r2["extensions"])
+
+        key_overlap = set(
+
+            map(str.lower, r1["keywords"])
+
+        ) & set(
+
+            map(str.lower, r2["keywords"])
+
+        )
+
+        if ext_overlap and not r1["keywords"] and not r2["keywords"]:
+
+            conflicts.append(
+
+                f"{r1['folder']} ↔ {r2['folder']} : 확장자 {', '.join(ext_overlap)}"
+
+            )
+
+        if key_overlap and not r1["extensions"] and not r2["extensions"]:
+
+            conflicts.append(
+
+                f"{r1['folder']} ↔ {r2['folder']} : 키워드 {', '.join(key_overlap)}"
+
+            )
+
+if conflicts:
+
+    for c in conflicts:
+
+        st.error(c)
+
+else:
+
+    st.success("충돌 없음 ✅")
+

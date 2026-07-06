@@ -1002,32 +1002,35 @@ if uploaded_files:
 
             try:
 
-                zip_data = create_zip(
+                result = create_zip(
 
-                    uploaded_files,
+    uploaded_files,
 
-                    st.session_state.rules,
+    st.session_state.rules,
 
-                    include_unmatched=include_unmatched,
+    include_unmatched=include_unmatched,
 
-                    create_empty_folder=create_empty_folder
+    create_empty_folder=create_empty_folder,
 
-                )
+    priority=st.session_state.priority,
 
-                st.download_button(
+    exclude_keywords=st.session_state.exclude_keywords
 
-                    "⬇ ZIP 다운로드",
+)
 
-                    data=zip_data,
+st.download_button(
 
-                    file_name=f"{zip_name}.zip",
+    "⬇ ZIP 다운로드",
 
-                    mime="application/zip",
+    data=result["zip"],
 
-                    use_container_width=True
+    file_name=f"{zip_name}.zip",
 
-                )
+    mime="application/zip",
 
+    use_container_width=True
+
+)
             except Exception as e:
 
                 st.error(str(e))

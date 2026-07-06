@@ -306,3 +306,51 @@ if uploaded_files:
 else:
 
     st.info("파일을 업로드하면 분류 결과를 미리 볼 수 있습니다.")
+
+# ==========================================
+
+st.divider()
+
+st.subheader("💾 규칙 저장")
+
+json_data = export_rules(st.session_state.rules)
+
+st.download_button(
+
+    "📥 규칙 저장",
+
+    json_data,
+
+    file_name="rules.json",
+
+    mime="application/json"
+
+)
+
+st.divider()
+
+st.subheader("📂 규칙 불러오기")
+
+rule_file = st.file_uploader(
+
+    "rules.json 선택",
+
+    type=["json"],
+
+    key="rule_loader"
+
+)
+
+if rule_file is not None:
+
+    try:
+
+        st.session_state.rules = import_rules(rule_file)
+
+        st.success("규칙을 불러왔습니다.")
+
+        st.rerun()
+
+    except Exception as e:
+
+        st.error(e)

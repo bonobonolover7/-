@@ -796,3 +796,5 @@ if test_name:
         st.warning("미분류됩니다.")
 
 st.divider()
+
+uploaded_files, extensions = upload_section()

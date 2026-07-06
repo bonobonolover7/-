@@ -125,6 +125,19 @@ for i, rule in enumerate(st.session_state.rules):
             key=f"keyword{i}"
 
         )
+match_mode = st.radio(
+
+    "분류 방식",
+
+    ["OR", "AND"],
+
+    horizontal=True,
+
+    key=f"mode{i}"
+
+)
+
+st.session_state.rules[i]["mode"] = match_mode
 
         st.session_state.rules[i]["keywords"] = keyword
 

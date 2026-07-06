@@ -343,37 +343,31 @@ st.divider()
 
 st.subheader("✨ 자동 규칙 생성")
 
-col1, col2 = st.columns([1,3])
+col1, col2 = st.columns(2)
 
 with col1:
 
-    if st.button("확장자별 생성", use_container_width=True):
+    if st.button("✨ 확장자 기준 생성", use_container_width=True):
 
-        st.session_state.rules = []
+        if uploaded_files:
 
-        for ext in extensions:
-
-            st.session_state.rules.append({
-
-                "folder": ext.upper(),
-
-                "extensions": [ext],
-
-                "keywords": [],
-
-                "mode": "OR"
-
-            })
-
-        if st.session_state.rules:
+            st.session_state.rules = create_extension_rules(uploaded_files)
 
             st.session_state.selected_rule = 0
 
-        st.rerun()
+            st.rerun()
 
 with col2:
 
-    st.caption("업로드된 파일의 확장자를 기준으로 규칙을 자동 생성합니다.")
+    if st.button("🧠 추천 규칙 생성", use_container_width=True):
+
+        if uploaded_files:
+
+            st.session_state.rules = create_ai_rules(uploaded_files)
+
+            st.session_state.selected_rule = 0
+
+            st.rerun()
 
 st.divider()
 

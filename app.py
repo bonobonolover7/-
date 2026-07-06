@@ -354,3 +354,39 @@ if rule_file is not None:
     except Exception as e:
 
         st.error(e)
+        
+# ==========================================
+
+st.divider()
+
+st.subheader("⚙ 규칙 관리")
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    if st.button("🗑 모든 규칙 삭제"):
+
+        st.session_state.rules = []
+
+        st.rerun()
+
+with col2:
+
+    st.write(f"현재 규칙 : **{len(st.session_state.rules)}개**")
+
+st.divider()
+
+st.subheader("📊 통계")
+
+if uploaded_files:
+
+    st.metric("업로드 파일", len(uploaded_files))
+
+    st.metric("발견된 확장자", len(extensions))
+
+    st.metric("규칙 개수", len(st.session_state.rules))
+
+else:
+
+    st.info("파일을 업로드하면 통계를 표시합니다.")

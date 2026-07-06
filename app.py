@@ -142,3 +142,74 @@ st.divider()
 st.subheader("현재 규칙")
 
 st.json(st.session_state.rules)
+
+st.divider()
+
+st.subheader("📋 규칙 검사")
+
+extension_owner = {}
+keyword_owner = {}
+
+rule_error = False
+
+for idx, rule in enumerate(st.session_state.rules):
+
+    folder = rule["folder"].strip()
+
+    extensions = rule["extensions"]
+
+    keywords = [
+        k.strip().lower()
+        for k in rule["keywords"].splitlines()
+        if k.strip()
+    ]
+
+    # 폴더 이름 검사
+    if folder == "":
+        st.error(f"{idx+1}번째 규칙 : 폴더 이름이 비어 있습니다.")
+        rule_error = True
+
+    # 최소 하나의 조건
+    if len(extensions) == 0 and len(keywords) == 0:
+        st.error(f"{folder or idx+1} : 확장자 또는 키워드를 하나 이상 입력해야 합니다.")
+        rule_error = True
+
+    # 확장자 중복 검사
+    for ext in extensions:
+
+        if ext in extension_owner:
+
+            st.error(
+                f"확장자 '{ext}'가 "
+                f"'{extension_owner[ext]}' 폴더와 중복됩니다."
+            )
+
+            rule_error = True
+
+        else:
+
+            extension_owner[ext] = folder
+
+    # 키워드 중복 검사
+    for key in keywords:
+
+        if key in keyword_owner:
+
+            st.error(
+                f"키워드 '{key}'가 "
+                f"'{keyword_owner[key]}' 폴더와 중복됩니다."
+            )
+
+            rule_error = True
+
+        else:
+
+            keyword_owner[key] = folder
+
+if not rule_error:
+
+    st.success("✅ 규칙에 문제가 없습니다.")
+
+else:
+
+    st.warning("위 오류를 수정해야 ZIP을 생성할 수 있습니다.")

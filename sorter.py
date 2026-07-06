@@ -96,7 +96,18 @@ def create_zip(
                     for k in rule["keywords"]
 
                 )
+exclude = st.session_state.get(
+    "exclude_keywords",
+    {}
+).get(rule["folder"], [])
 
+exclude_ok = not any(
+
+    k.lower() in filename.lower()
+
+    for k in exclude
+
+)
                 if rule["mode"] == "OR":
 
                     ok = ext_match or keyword_match

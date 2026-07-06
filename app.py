@@ -992,30 +992,30 @@ if uploaded_files:
 
     else:
 
-if st.button("📦 ZIP 만들기", use_container_width=True):
+        if st.button("📦 ZIP 만들기", use_container_width=True):
 
-    try:
+            try:
 
-        result = create_zip(
-            uploaded_files,
-            st.session_state.rules,
-            include_unmatched=include_unmatched,
-            create_empty_folder=create_empty_folder,
-            priority=st.session_state.priority,
-            exclude_keywords=st.session_state.exclude_keywords
-        )
+                result = create_zip(
+                    uploaded_files,
+                    st.session_state.rules,
+                    include_unmatched=include_unmatched,
+                    create_empty_folder=create_empty_folder,
+                    priority=st.session_state.priority,
+                    exclude_keywords=st.session_state.exclude_keywords
+                )
 
-        st.download_button(
-            "⬇ ZIP 다운로드",
-            data=result["zip"],
-            file_name=f"{zip_name}.zip",
-            mime="application/zip",
-            use_container_width=True
-        )
+                st.download_button(
+                    "⬇ ZIP 다운로드",
+                    data=result["zip"],
+                    file_name=f"{zip_name}.zip",
+                    mime="application/zip",
+                    use_container_width=True
+                )
 
-    except Exception as e:
+            except Exception as e:
 
-        st.error(str(e))
+                st.error(str(e))
 
 else:
 

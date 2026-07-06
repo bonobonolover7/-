@@ -1,17 +1,13 @@
-from pathlib import Path
 from io import BytesIO
+from pathlib import Path
 import zipfile
 
 
-def create_zip(uploaded_files, rules):
+def create_zip(uploaded_files, rules, include_unmatched=True):
 
-    memory_file = BytesIO()
+    memory = BytesIO()
 
-    with zipfile.ZipFile(
-        memory_file,
-        "w",
-        zipfile.ZIP_DEFLATED
-    ) as zipf:
+    with zipfile.ZipFile(memory, "w", zipfile.ZIP_DEFLATED) as zipf:
 
         for file in uploaded_files:
 
@@ -26,99 +22,41 @@ def create_zip(uploaded_files, rules):
                 folder = rule["folder"].strip()
 
                 if folder == "":
-                    folder = "이름없는폴더"
+                    continue
 
-                ext_match = False
-                keyword_match = False
+                ext_match = extension in rule["extensions"]
 
-                # 확장자 검사
-                if len(rule["extensions"]) > 0:
-
-                    ext_match = extension in rule["extensions"]
-
-                # 키워드 검사
-                if rule["keywords"].strip():
-
-                    keywords = [
-                        k.strip().lower()
-                        for k in rule["keywords"].splitlines()
-                        if k.strip()
-                    ]
-
-                    keyword_match = any(
-                        k in filename.lower()
-                        for k in keywords
-                    )
-
-                # 둘 중 하나만 만족해도 이동
-                mode = rule.get("mode", "OR")
-
-if mode == "OR":
-
-    matched = ext_match or keyword_match
-
-else:
-
-    matched = ext_match and keyword_match
-
-if matched:
-
-    zipf.writestr(
-
-        f"{folder}/{filename}",
-
-        file.getvalue()
-
-    )
-
-    moved = True
-
-    break
-
-            if not moved:
-
-                zipf.writestr(
-
-                    f"미분류/{filename}",
-
-                    file.getvalue()
-
+                keyword_match = any(
+                    k.lower() in filename.lower()
+                    for k in rule["keywords"]
                 )
 
-    memory_file.seek(0)
+                if rule["mode"] == "OR":
 
-    return memory_file
+                    ok = ext_match or keyword_match
 
-# ==========================================
+                else:
 
-st.divider()
+                    ok = ext_match and keyword_match
 
-st.subheader("⚙ 생성 옵션")
+                if ok:
 
-zip_name = st.text_input(
-    "ZIP 파일 이름",
-    value="분류결과"
-)
+                    zipf.writestr(
+                        f"{folder}/{filename}",
+                        file.getvalue()
+                    )
 
-include_unmatched = st.checkbox(
-    "미분류 폴더 포함",
-    value=True
-)
+                    moved = True
 
-st.divider()
+                    break
 
-st.subheader("📊 파일 정보")
+            if not moved and include_unmatched:
 
-if uploaded_files:
+                zipf.writestr(
+                    f"미분류/{filename}",
+                    file.getvalue()
+                )
 
-    total_size = sum(file.size for file in uploaded_files)
+    memory.seek(0)
 
-    total_mb = total_size / (1024 * 1024)
-
-    st.metric("업로드 파일", len(uploaded_files))
-    st.metric("총 용량(MB)", f"{total_mb:.2f}")
-    st.metric("확장자 종류", len(extensions))
-
-else:
-
-    st.info("파일을 업로드하세요.")
+    return memory

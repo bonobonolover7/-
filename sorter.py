@@ -51,7 +51,29 @@ def create_zip(uploaded_files, rules):
                     )
 
                 # 둘 중 하나만 만족해도 이동
-                if ext_match or keyword_match:
+                mode = rule.get("mode", "OR")
+
+if mode == "OR":
+
+    matched = ext_match or keyword_match
+
+else:
+
+    matched = ext_match and keyword_match
+
+if matched:
+
+    zipf.writestr(
+
+        f"{folder}/{filename}",
+
+        file.getvalue()
+
+    )
+
+    moved = True
+
+    break
 
                     zipf.writestr(
                         f"{folder}/{filename}",

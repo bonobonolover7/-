@@ -109,13 +109,9 @@ exclude_ok = not any(
 
 )
                 if rule["mode"] == "OR":
-
-                    ok = ext_match or keyword_match
-
+                    ok = (ext_match or keyword_match) and exclude_ok
                 else:
-
-                    ok = ext_match and keyword_match
-
+                    ok = (ext_match and keyword_match) and exclude_ok
                 if ok:
 
                     target = f"{folder}/{filename}"

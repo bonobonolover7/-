@@ -88,3 +88,37 @@ if matched:
     memory_file.seek(0)
 
     return memory_file
+
+# ==========================================
+
+st.divider()
+
+st.subheader("⚙ 생성 옵션")
+
+zip_name = st.text_input(
+    "ZIP 파일 이름",
+    value="분류결과"
+)
+
+include_unmatched = st.checkbox(
+    "미분류 폴더 포함",
+    value=True
+)
+
+st.divider()
+
+st.subheader("📊 파일 정보")
+
+if uploaded_files:
+
+    total_size = sum(file.size for file in uploaded_files)
+
+    total_mb = total_size / (1024 * 1024)
+
+    st.metric("업로드 파일", len(uploaded_files))
+    st.metric("총 용량(MB)", f"{total_mb:.2f}")
+    st.metric("확장자 종류", len(extensions))
+
+else:
+
+    st.info("파일을 업로드하세요.")

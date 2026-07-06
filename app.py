@@ -992,7 +992,7 @@ if uploaded_files:
 
     else:
 
-        if st.button("📦 ZIP 만들기", use_container_width=True):
+if st.button("📦 ZIP 만들기", use_container_width=True):
 
     try:
 
@@ -1020,7 +1020,6 @@ if uploaded_files:
 else:
 
     st.info("파일을 업로드하세요.")
-
 # =====================================================
 # 규칙 복사 / 붙여넣기
 # =====================================================

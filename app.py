@@ -257,3 +257,96 @@ if move_down is not None:
         st.rerun()
 
 st.divider()
+
+# =====================================================
+
+st.header("✅ 규칙 검사")
+
+errors = []
+
+ext_only = {}
+keyword_only = {}
+combo = {}
+
+for idx, rule in enumerate(st.session_state.rules):
+
+    folder = rule["folder"].strip()
+
+    extensions = rule["extensions"]
+
+    keywords = [k.lower() for k in rule["keywords"]]
+
+    # 폴더 이름 검사
+    if folder == "":
+        errors.append(f"{idx+1}번째 규칙의 폴더 이름이 비어 있습니다.")
+
+    # 조건 검사
+    if len(extensions) == 0 and len(keywords) == 0:
+        errors.append(f"{folder or idx+1} : 확장자 또는 키워드를 하나 이상 입력하세요.")
+        continue
+
+    # ----------------------------
+    # 확장자만 사용하는 규칙
+    # ----------------------------
+    if extensions and not keywords:
+
+        for ext in extensions:
+
+            if ext in ext_only:
+
+                errors.append(
+                    f"'{ext}' 확장자는 '{ext_only[ext]}' 규칙과 중복됩니다."
+                )
+
+            else:
+
+                ext_only[ext] = folder
+
+    # ----------------------------
+    # 키워드만 사용하는 규칙
+    # ----------------------------
+    elif keywords and not extensions:
+
+        for key in keywords:
+
+            if key in keyword_only:
+
+                errors.append(
+                    f"'{key}' 키워드는 '{keyword_only[key]}' 규칙과 중복됩니다."
+                )
+
+            else:
+
+                keyword_only[key] = folder
+
+    # ----------------------------
+    # 둘 다 사용하는 규칙
+    # ----------------------------
+    else:
+
+        for ext in extensions:
+
+            for key in keywords:
+
+                pair = (ext, key)
+
+                if pair in combo:
+
+                    errors.append(
+                        f"'{ext}+{key}' 조합이 중복되었습니다."
+                    )
+
+                else:
+
+                    combo[pair] = folder
+
+if errors:
+
+    for err in errors:
+
+        st.error(err)
+
+else:
+
+    st.success("규칙에 문제가 없습니다.")
+

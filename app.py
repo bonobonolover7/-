@@ -213,3 +213,95 @@ if not rule_error:
 else:
 
     st.warning("위 오류를 수정해야 ZIP을 생성할 수 있습니다.")
+
+# =========================================
+
+st.divider()
+
+st.subheader("📂 파일 분류 미리보기")
+
+if uploaded_files:
+
+    preview = {}
+
+    # 규칙별 빈 폴더 생성
+    for rule in st.session_state.rules:
+
+        folder = rule["folder"].strip()
+
+        if folder == "":
+            folder = "이름없는폴더"
+
+        preview[folder] = []
+
+    preview["미분류"] = []
+
+    # 파일 하나씩 검사
+    for file in uploaded_files:
+
+        filename = file.name
+
+        extension = Path(filename).suffix.lower().replace(".", "")
+
+        matched = False
+
+        for rule in st.session_state.rules:
+
+            folder = rule["folder"].strip()
+
+            if folder == "":
+                folder = "이름없는폴더"
+
+            ext_match = False
+            keyword_match = False
+
+            # 확장자 검사
+            if len(rule["extensions"]) > 0:
+
+                ext_match = extension in rule["extensions"]
+
+            # 키워드 검사
+            if rule["keywords"].strip():
+
+                keywords = [
+                    k.strip().lower()
+                    for k in rule["keywords"].splitlines()
+                    if k.strip()
+                ]
+
+                keyword_match = any(
+                    k in filename.lower()
+                    for k in keywords
+                )
+
+            # OR 방식
+            if ext_match or keyword_match:
+
+                preview[folder].append(filename)
+
+                matched = True
+
+                break
+
+        if not matched:
+
+            preview["미분류"].append(filename)
+
+    # 화면 출력
+    for folder, files in preview.items():
+
+        with st.expander(f"📁 {folder} ({len(files)}개)"):
+
+            if len(files) == 0:
+
+                st.caption("파일 없음")
+
+            else:
+
+                for f in files:
+
+                    st.write("📄", f)
+
+else:
+
+    st.info("파일을 업로드하면 분류 결과를 미리 볼 수 있습니다.")

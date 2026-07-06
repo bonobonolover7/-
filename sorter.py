@@ -3,41 +3,15 @@ from io import BytesIO
 import zipfile
 
 
-def match_rule(filename, extension, rule):
-    """
-    규칙과 파일이 일치하는지 확인
-    """
-
-    ext_match = False
-    keyword_match = False
-
-    if rule["extensions"]:
-        ext_match = extension in rule["extensions"]
-
-    if rule["keywords"].strip():
-
-        keywords = [
-            k.strip().lower()
-            for k in rule["keywords"].splitlines()
-            if k.strip()
-        ]
-
-        keyword_match = any(
-            k in filename.lower()
-            for k in keywords
-        )
-
-    if rule["extensions"] and rule["keywords"].strip():
-        return ext_match or keyword_match
-
-    return ext_match or keyword_match
-
-
 def create_zip(uploaded_files, rules):
 
     memory_file = BytesIO()
 
-    with zipfile.ZipFile(memory_file, "w", zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(
+        memory_file,
+        "w",
+        zipfile.ZIP_DEFLATED
+    ) as zipf:
 
         for file in uploaded_files:
 
@@ -45,30 +19,57 @@ def create_zip(uploaded_files, rules):
 
             extension = Path(filename).suffix.lower().replace(".", "")
 
-            matched = False
+            moved = False
 
             for rule in rules:
 
-                if match_rule(filename, extension, rule):
+                folder = rule["folder"].strip()
 
-                    folder = rule["folder"].strip()
+                if folder == "":
+                    folder = "이름없는폴더"
 
-                    if folder == "":
-                        folder = "Unnamed"
+                ext_match = False
+                keyword_match = False
 
-                    zf.writestr(
+                # 확장자 검사
+                if len(rule["extensions"]) > 0:
+
+                    ext_match = extension in rule["extensions"]
+
+                # 키워드 검사
+                if rule["keywords"].strip():
+
+                    keywords = [
+                        k.strip().lower()
+                        for k in rule["keywords"].splitlines()
+                        if k.strip()
+                    ]
+
+                    keyword_match = any(
+                        k in filename.lower()
+                        for k in keywords
+                    )
+
+                # 둘 중 하나만 만족해도 이동
+                if ext_match or keyword_match:
+
+                    zipf.writestr(
                         f"{folder}/{filename}",
                         file.getvalue()
                     )
 
-                    matched = True
+                    moved = True
+
                     break
 
-            if not matched:
+            if not moved:
 
-                zf.writestr(
+                zipf.writestr(
+
                     f"미분류/{filename}",
+
                     file.getvalue()
+
                 )
 
     memory_file.seek(0)
